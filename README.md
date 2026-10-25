@@ -46,6 +46,20 @@ streamlit run app.py
 
 Open the local URL printed by Streamlit. The application creates `app_data/` for its SQLite database and preserved evidence files. Both are excluded from Git by `.gitignore`; back them up and restrict access according to your institution's evidence policy.
 
+### Deploy on Streamlit Community Cloud
+
+1. In Streamlit Community Cloud, create a new app from `ojhaddeepak/emailforensic`, select branch `main`, and set the main file path to `app.py`.
+2. If enabling VirusTotal, add this in the app's **Settings → Secrets** as TOML:
+
+   ```toml
+   VIRUSTOTAL_API_KEY = "your_actual_api_key"
+   ```
+
+   The application reads the key from Cloud secrets without displaying it. Do not commit the key or put it in a public file.
+3. Deploy the app and check the app logs if dependency installation or startup fails.
+
+This project has no user authentication and stores uploaded emails, evidence copies, and its SQLite database under `app_data/` on the app's local filesystem. Hosted files may be accessible to anyone who can access the app, and local filesystem data may not survive restarts or redeployments. Do not upload real, confidential, or regulated email evidence to a publicly accessible deployment; use synthetic data for demonstrations. This app does not currently provide durable cloud storage or multi-user access controls.
+
 ### Optional VirusTotal setup
 
 Create a private `.env` without overwriting one that already exists, then edit it locally:

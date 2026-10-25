@@ -17,10 +17,22 @@ class VirusTotalError(RuntimeError):
 
 
 def _api_key(api_key: str | None = None) -> str:
-    key = api_key or os.getenv("VIRUSTOTAL_API_KEY")
+    key = api_key or os.getenv("VIRUSTOTAL_API_KEY") or _streamlit_api_key()
     if not key:
-        raise VirusTotalError("VirusTotal is not configured. Set VIRUSTOTAL_API_KEY in your local .env file.")
+        raise VirusTotalError(
+            "VirusTotal is not configured. Set VIRUSTOTAL_API_KEY in your local .env file "
+            "or Streamlit Community Cloud secrets."
+        )
     return key
+
+
+def _streamlit_api_key() -> str:
+    try:
+        import streamlit as st
+
+        return str(st.secrets.get("VIRUSTOTAL_API_KEY", "")).strip()
+    except FileNotFoundError:
+        return ""
 
 
 def url_identifier(url: str) -> str:
@@ -236,9 +248,7 @@ def submit_url_for_scanning(
 
 
 def lookup_domain(domain: str, api_key: str | None = None, timeout: int = 10) -> dict:
-    key = api_key or os.getenv("VIRUSTOTAL_API_KEY")
-    if not key:
-        raise VirusTotalError("VirusTotal is not configured: set VIRUSTOTAL_API_KEY to enable manual lookups.")
+    key = _api_key(api_key)
     safe_domain = domain.strip().lower().rstrip(".")
     if not safe_domain or any(char in safe_domain for char in "/?#@"):
         raise VirusTotalError("A valid hostname is required for a domain lookup.")

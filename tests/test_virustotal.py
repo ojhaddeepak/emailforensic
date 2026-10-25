@@ -25,8 +25,33 @@ class FakeResponse:
 
 def test_missing_key_is_actionable(monkeypatch):
     monkeypatch.delenv("VIRUSTOTAL_API_KEY", raising=False)
+    monkeypatch.setattr(client, "_streamlit_api_key", lambda: "")
     with pytest.raises(VirusTotalError, match="not configured"):
         lookup_domain("example.com")
+
+
+def test_streamlit_secret_is_used_when_environment_key_is_missing(monkeypatch):
+    monkeypatch.delenv("VIRUSTOTAL_API_KEY", raising=False)
+    monkeypatch.setattr(client, "_streamlit_api_key", lambda: "cloud-test-key")
+    calls = []
+    monkeypatch.setattr(
+        client.requests,
+        "get",
+        lambda *args, **kwargs: calls.append(kwargs["headers"]["x-apikey"])
+        or FakeResponse(
+            payload={
+                "data": {
+                    "attributes": {
+                        "last_analysis_stats": {"malicious": 0, "suspicious": 0, "harmless": 1, "undetected": 0}
+                    }
+                }
+            }
+        ),
+    )
+
+    lookup_domain("example.com")
+
+    assert calls == ["cloud-test-key"]
 
 
 def test_rate_limit_is_reported_without_exposing_api_key(monkeypatch):
@@ -158,6 +183,7 @@ def test_url_report_network_failure_is_sanitized(monkeypatch):
 
 def test_url_report_missing_key_does_not_make_request(monkeypatch):
     monkeypatch.delenv("VIRUSTOTAL_API_KEY", raising=False)
+    monkeypatch.setattr(client, "_streamlit_api_key", lambda: "")
 
     def unexpected_request(*args, **kwargs):
         pytest.fail("A request must not be made without an API key.")
